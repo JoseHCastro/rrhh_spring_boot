@@ -1,0 +1,53 @@
+package com.example.rrhh.proyecto.empleado;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.Optional;
+
+public interface EmpleadoRepository extends JpaRepository<Empleado, Long> {
+
+    // Filtro combinado con JOIN FETCH para cargar departamento y cargo en 1 query
+    @Query("""
+        SELECT e FROM Empleado e
+        JOIN FETCH e.departamento d
+        JOIN FETCH e.cargo c
+        LEFT JOIN FETCH e.supervisor s
+        WHERE (:estado IS NULL OR e.estado = :estado)
+          AND (:departamentoId IS NULL OR d.id = :departamentoId)
+    """)
+    Page<Empleado> findAllWithFilters(
+        @Param("estado") EstadoEmpleado estado,
+        @Param("departamentoId") Long departamentoId,
+        Pageable pageable
+    );
+
+    // Carga un empleado con sus relaciones (departamento, cargo, supervisor) en 1 query.
+    // Necesario porque open-in-view=false: las asociaciones LAZY no se pueden resolver
+    // durante la serialización GraphQL (fuera de la transacción) si no se traen aquí.
+    @Query("""
+        SELECT e FROM Empleado e
+        JOIN FETCH e.departamento d
+        JOIN FETCH e.cargo c
+        LEFT JOIN FETCH e.supervisor s
+        WHERE e.id = :id
+    """)
+    Optional<Empleado> findByIdWithRelations(@Param("id") Long id);
+
+    Optional<Empleado> findByCarnetIdentidad(String carnetIdentidad);
+
+    boolean existsByCarnetIdentidad(String carnetIdentidad);
+
+    @Query("""
+        SELECT e FROM Empleado e
+        JOIN FETCH e.departamento d
+        JOIN FETCH e.cargo c
+        LEFT JOIN FETCH e.supervisor s
+        JOIN Usuario u ON u.empleado.id = e.id
+        WHERE u.username = :username
+    """)
+    Optional<Empleado> findByUsuarioUsername(@Param("username") String username);
+}
