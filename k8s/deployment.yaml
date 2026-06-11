@@ -18,6 +18,9 @@ spec:
           imagePullPolicy: Never # Porque construiremos la imagen localmente en el servidor
           ports:
             - containerPort: 8080
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx256m -Xms128m"
           envFrom:
             - configMapRef:
                 name: rrhh-config
